@@ -1,0 +1,116 @@
+{
+  "questions": [
+    {
+      "role": "Executive",
+      "goal": "Strategic Alignment",
+      "question": "How effectively does our current data strategy align with the overall business objectives?",
+      "response": [
+        { "id": 1, "text": "Very effectively" },
+        { "id": 2, "text": "Moderately effectively" },
+        { "id": 3, "text": "Slightly effectively" },
+        { "id": 4, "text": "Not effectively at all" }
+      ]
+    },
+    {
+      "role": "Executive",
+      "goal": "ROI of Data Initiatives",
+      "question": "What is your perception of the return on investment (ROI) from our data-related projects?",
+      "response": [
+        { "id": 1, "text": "High ROI" },
+        { "id": 2, "text": "Moderate ROI" },
+        { "id": 3, "text": "Low ROI" },
+        { "id": 4, "text": "Unsure" }
+      ]
+    },
+    {
+      "role": "Governance/Risk/Compliance",
+      "goal": "Team Performance",
+      "question": "How would you rate your team's overall performance in delivering data-driven insights?",
+      "response": [
+        { "id": 1, "text": "Excellent" },
+        { "id": 2, "text": "Good" },
+        { "id": 3, "text": "Average" },
+        { "id": 4, "text": "Needs improvement" }
+      ]
+    },
+    {
+      "role": "Governance/Risk/Compliance",
+      "goal": "Resource Allocation",
+      "question": "Do you have sufficient resources (tools, personnel, budget) to support your team's data initiatives?",
+      "response": [
+        { "id": 1, "text": "Yes, fully sufficient" },
+        { "id": 2, "text": "Mostly sufficient" },
+        { "id": 3, "text": "Somewhat insufficient" },
+        { "id": 4, "text": "Highly insufficient" }
+      ]
+    },
+    {
+      "role": "Data Scientist",
+      "goal": "Tooling and Environment",
+      "question": "How satisfied are you with the data science tools and environment provided?",
+      "response": [
+        { "id": 1, "text": "Very satisfied" },
+        { "id": 2, "text": "Satisfied" },
+        { "id": 3, "text": "Neutral" },
+        { "id": 4, "text": "Dissatisfied" },
+        { "id": 5, "text": "Very dissatisfied" }
+      ]
+    },
+    {
+      "role": "Data Scientist",
+      "goal": "Data Quality",
+      "question": "How often do you encounter issues with data quality that impact your work?",
+      "response": [
+        { "id": 1, "text": "Rarely" },
+        { "id": 2, "text": "Occasionally" },
+        { "id": 3, "text": "Frequently" },
+        { "id": 4, "text": "Almost always" }
+      ]
+    },
+    {
+      "role": "Data Engineer",
+      "goal": "Data Pipeline Efficiency",
+      "question": "How efficient and reliable are the current data pipelines you work with?",
+      "response": [
+        { "id": 1, "text": "Highly efficient and reliable" },
+        { "id": 2, "text": "Moderately efficient and reliable" },
+        { "id": 3, "text": "Somewhat inefficient/unreliable" },
+        { "id": 4, "text": "Highly inefficient/unreliable" }
+      ]
+    },
+    {
+      "role": "Data Engineer",
+      "goal": "Infrastructure Support",
+      "question": "Do you receive adequate infrastructure support for your data engineering tasks?",
+      "response": [
+        { "id": 1, "text": "Always" },
+        { "id": 2, "text": "Most of the time" },
+        { "id": 3, "text": "Sometimes" },
+        { "id": 4, "text": "Rarely or never" }
+      ]
+    },
+    {
+      "role": "Developer",
+      "goal": "Development Environment",
+      "question": "How productive are you with your current development environment and tools?",
+      "response": [
+        { "id": 1, "text": "Very productive" },
+        { "id": 2, "text": "Productive" },
+        { "id": 3, "text": "Neutral" },
+        { "id": 4, "text": "Unproductive" },
+        { "id": 5, "text": "Very unproductive" }
+      ]
+    },
+    {
+      "role": "Developer",
+      "goal": "Code Review Process",
+      "question": "How effective is our code review process in improving code quality and knowledge sharing?",
+      "response": [
+        { "id": 1, "text": "Very effective" },
+        { "id": 2, "text": "Moderately effective" },
+        { "id": 3, "text": "Slightly effective" },
+        { "id": 4, "text": "Not effective at all" }
+      ]
+    }
+  ]
+}
