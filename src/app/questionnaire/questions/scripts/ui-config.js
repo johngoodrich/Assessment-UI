@@ -5,8 +5,8 @@ import ExcelJS from 'exceljs/dist/exceljs.min.js';
  * @returns {Promise<import('exceljs').Worksheet>}
  */
 
-export async function loadUiConfig() {
-    const response = await fetch('/assets/AI_Maturity_Assessment.xlsx'); // Point to the correct asset path
+export async function loadUiConfig(url) {
+    const response = await fetch(url);
     if (!response.ok) {
         throw new Error(`Failed to fetch Excel file: ${response.status} ${response.statusText}`);
     }
