@@ -1,5 +1,6 @@
 import { loadQuestionConfig } from './scripts/question-config.js';
 import { loadAnswerConfig } from './scripts/answer-config.js';
+import { loadUiConfig } from './scripts/ui-config.js';
 
 export class AssessmentQuestions extends HTMLElement {
         constructor() {
@@ -36,11 +37,6 @@ export class AssessmentQuestions extends HTMLElement {
                         <h2>Select Your Role</h2>
                         <select id="role-selector">
                             <option value="">--Please choose an option--</option>
-                            <option value="Executive">Executive</option>
-                            <option value="Governance/Risk/Compliance">Governance/Risk/Compliance</option>
-                            <option value="Data Scientist">Data Scientist</option>
-                            <option value="Data Engineer">Data Engineer</option>
-                            <option value="Developer">Developer</option>
                         </select>
                     </div>
                     <div id="questionnaire-section" class="hidden">
@@ -77,8 +73,34 @@ export class AssessmentQuestions extends HTMLElement {
                 thankYou: qs('thank-you-message')
             };
 
+            // Populate roles from Excel config
+            this.populateRoles();
+
             this.els.roleSelector.addEventListener('change', (e) => this.handleRoleSelection(e.target.value));
             this.els.submitBtn.addEventListener('click', () => this.handleSubmit());
+        }
+
+        async populateRoles() {
+            try {
+                const uiWorksheet = await loadUiConfig();
+                if (!uiWorksheet) throw new Error('AIA-UI-Config worksheet not found');
+
+                // Clear existing and keep placeholder
+                this.els.roleSelector.innerHTML = '<option value="">--Please choose an option--</option>';
+
+                uiWorksheet.eachRow((row, rowNumber) => {
+                    if (rowNumber === 1) return; // Skip Header
+                    const role = this.getCellString(row.getCell(1));
+                    if (role) {
+                        const option = document.createElement('option');
+                        option.value = role;
+                        option.textContent = role;
+                        this.els.roleSelector.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to populate roles from Excel:', error.message);
+            }
         }
 
         // Helper to get string value from a cell (handles RichText and whitespace)
