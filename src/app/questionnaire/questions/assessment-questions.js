@@ -1,6 +1,7 @@
 import { loadQuestionConfig } from './scripts/question-config.js';
 import { loadAnswerConfig } from './scripts/answer-config.js';
 import { loadUiConfig } from './scripts/ui-config.js';
+import ExcelJS from 'exceljs/dist/exceljs.min.js';
 
 export class AssessmentQuestions extends HTMLElement {
         constructor() {
@@ -80,9 +81,23 @@ export class AssessmentQuestions extends HTMLElement {
             this.els.submitBtn.addEventListener('click', () => this.handleSubmit());
         }
 
+        async ensureWorkbookLoaded() {
+            if (this.workbookInstance) return;
+
+            const url = 'http://localhost:3000/api/get-assessment-template';
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Server returned ${res.status}: ${res.statusText}`);
+
+            const buffer = await res.arrayBuffer();
+            this.workbookInstance = new ExcelJS.Workbook();
+            await this.workbookInstance.xlsx.load(buffer);
+            console.log('Workbook successfully loaded from API server.');
+        }
+
         async populateRoles() {
             try {
-                const uiWorksheet = await loadUiConfig();
+                await this.ensureWorkbookLoaded();
+                const uiWorksheet = this.workbookInstance.getWorksheet('AIA-UI-Config');
                 if (!uiWorksheet) throw new Error('AIA-UI-Config worksheet not found');
 
                 // Clear existing and keep placeholder
@@ -114,30 +129,26 @@ export class AssessmentQuestions extends HTMLElement {
         }
 
         async loadQuestions(selectedRole) {
-            const url = this.getAttribute('questions-url') || 'questions.data.json';
             try {
-                // Optional: You can still load JSON as a fallback or base
-                // const response = await fetch(url);
-                // const data = await response.json();
-                // this.state.allQuestions = data.questions;
+                await this.ensureWorkbookLoaded();
 
-                // Load from Excel
                 try {
-                    const [worksheet, answerWorksheet] = await Promise.all([
-                        loadQuestionConfig(),
-                        loadAnswerConfig()
-                    ]);
+                    const worksheet = this.workbookInstance.getWorksheet('AIA-Question-Config');
+                    const answerWorksheet = this.workbookInstance.getWorksheet('AIA-Question-Response-Map');
+
+                    if (!worksheet || !answerWorksheet) throw new Error('Required worksheets not found in workbook');
 
                     // Pre-build a map of responses keyed by the Question ID for efficient lookup
                     const responseMap = new Map();
                     answerWorksheet.eachRow((row, rowNumber) => {
                         if (rowNumber === 1) return; // Skip Header
-                        const qId = String(row.getCell(1).value).trim();
-                        const responses = [];
+                        const qId = this.getCellString(row.getCell(1));
+                        if (!qId) return;
 
-                        // Loop through cells 2-8 to gather the 7 response options
+                        const responses = [];
+                        // Loop through columns B-H (cells 2-8) to gather the response options for this question row
                         for (let i = 2; i <= 8; i++) {
-                            const responseText = row.getCell(i).value;
+                            const responseText = this.getCellString(row.getCell(i));
                             if (responseText) {
                                 responses.push({
                                     id: i - 1, // Create a 1-indexed ID for the option
@@ -154,17 +165,17 @@ export class AssessmentQuestions extends HTMLElement {
 
                         // Normalize role and ID for exact matching
                         const rowRole = this.getCellString(row.getCell(2));
-                        const questionId = String(row.getCell(1).value).trim();
+                        const questionId = this.getCellString(row.getCell(1));
 
                         if (rowRole === selectedRole) {
                             excelQuestions.push({
                               id: questionId,
                               role: rowRole,
-                              domain: row.getCell(3).value, // Assuming domain is in the third column
-                              subSection: row.getCell(4).value, // Assuming subsection is in the fourth column
-                              subsectionGoal: row.getCell(5).value,
-                              subsectionWeight: row.getCell(6).value,
-                              question: row.getCell(7).value,
+                              domain: this.getCellString(row.getCell(3)),
+                              subSection: this.getCellString(row.getCell(4)),
+                              subsectionGoal: this.getCellString(row.getCell(5)),
+                              subsectionWeight: this.getCellString(row.getCell(6)),
+                              question: this.getCellString(row.getCell(7)),
                               // Example of mapping static responses or parsing more columns
                               response: responseMap.get(questionId) || []
                             });
@@ -178,7 +189,7 @@ export class AssessmentQuestions extends HTMLElement {
                 }
             } catch (error) {
                 console.error('Error loading questions:', error.message);
-                this.els.questionText.textContent = `Error: Could not load questions. Please verify that the file exists at ${url}`;
+                this.els.questionText.textContent = `Error: Could not load questions from server.`;
             }
         }
 
@@ -211,14 +222,64 @@ export class AssessmentQuestions extends HTMLElement {
                 const input = document.createElement('input');
                 input.type = 'radio';
                 input.name = 'currentQuestionResponse';
-                input.value = option.id;
+                input.value = option.text;
                 label.appendChild(input);
                 label.appendChild(document.createTextNode(option.text));
                 this.els.responseOptions.appendChild(label);
             });
         }
 
-        handleSubmit() {
+        async captureResponse(role, questionId, responseValue) {
+            try {
+                await this.ensureWorkbookLoaded();
+
+                let captureSheet = this.workbookInstance.getWorksheet('AIA-Response-Capture');
+                if (!captureSheet) {
+                    captureSheet = this.workbookInstance.addWorksheet('AIA-Response-Capture');
+                    // Initialize headers for the capture sheet as per requirements
+                    captureSheet.addRow(['Respondent Role', 'Question ID', 'Chosen Response']);
+                }
+
+                // Append the response data to Columns A, B, and C
+                captureSheet.addRow([role, questionId, responseValue]);
+                console.log(`Captured response for ${questionId} in Excel (Role: ${role})`);
+            } catch (error) {
+                console.error('Failed to capture response to Excel:', error);
+            }
+        }
+
+        async sendResultsToServer() {
+            if (!this.workbookInstance) return;
+
+            try {
+                // Generate the binary buffer from the in-memory workbook
+                const buffer = await this.workbookInstance.xlsx.writeBuffer();
+
+                // Send the buffer to a server endpoint
+                const response = await fetch('http://localhost:3000/api/save-assessment-results', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        'X-Filename': 'AI_Maturity_Assessment.xlsx' // Use the exact filename for the server to overwrite
+                    },
+                    body: buffer // Send the raw ArrayBuffer
+                });
+
+                if (response.ok) {
+                    console.log('Assessment results successfully sent to server.');
+                    // Optionally, you can get a response from the server, e.g., a URL to the saved file
+                    // const serverResponse = await response.json();
+                    // console.log('Server response:', serverResponse);
+                } else {
+                    console.error('Failed to send assessment results to server:', response.status, response.statusText);
+                }
+
+            } catch (error) {
+                console.error('Failed to export Excel file:', error);
+            }
+        }
+
+        async handleSubmit() {
             const selected = this.shadowRoot.querySelector('input[name="currentQuestionResponse"]:checked');
             if (!selected) {
                 alert('Please select an answer before submitting.');
@@ -226,7 +287,18 @@ export class AssessmentQuestions extends HTMLElement {
             }
 
             const question = this.state.currentRoleQuestions[this.state.currentQuestionIndex];
-            this.state.userResponses[question.goal] = selected.value;
+            const role = this.els.roleSelector.value;
+            const responseValue = selected.value;
+
+            // Update internal state map
+            this.state.userResponses[question.subsectionGoal] = responseValue;
+
+            // Capture response to the persistent Excel worksheet object
+            await this.captureResponse(role, question.id, responseValue);
+
+            // Send the updated workbook to the server after every question
+            await this.sendResultsToServer();
+
             this.state.currentQuestionIndex++;
 
             if (this.state.currentQuestionIndex < this.state.currentRoleQuestions.length) {

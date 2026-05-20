@@ -1,7 +1,6 @@
 import Excel from 'exceljs/dist/exceljs.min.js';
 
-export async function loadQuestionConfig() {
-    const url = '/assets/AI_Maturity_Assessment.xlsx';
+export async function loadQuestionConfig(url) {
     const workbook = new Excel.Workbook();
     try {
         await workbook.xlsx.load(await fetch(url).then(res => res.arrayBuffer()));
