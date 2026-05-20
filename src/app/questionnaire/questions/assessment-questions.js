@@ -1,7 +1,7 @@
 import { loadQuestionConfig } from './scripts/question-config.js';
 import { loadAnswerConfig } from './scripts/answer-config.js';
-import { loadUiConfig } from './scripts/ui-config.js';
-import ExcelJS from 'exceljs/dist/exceljs.min.js';
+import { loadUiConfig } from '../../scripts/ui-config.js';
+import { ensureWorkbookLoaded } from '../../scripts/server.js';
 
 export class AssessmentQuestions extends HTMLElement {
         constructor() {
@@ -83,15 +83,7 @@ export class AssessmentQuestions extends HTMLElement {
 
         async ensureWorkbookLoaded() {
             if (this.workbookInstance) return;
-
-            const url = 'http://localhost:3000/api/get-assessment-template';
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`Server returned ${res.status}: ${res.statusText}`);
-
-            const buffer = await res.arrayBuffer();
-            this.workbookInstance = new ExcelJS.Workbook();
-            await this.workbookInstance.xlsx.load(buffer);
-            console.log('Workbook successfully loaded from API server.');
+            this.workbookInstance = await ensureWorkbookLoaded();
         }
 
         async populateRoles() {
