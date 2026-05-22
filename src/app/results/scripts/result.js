@@ -1,13 +1,14 @@
-import { createChart } from './mock-result-chart.js';
+import { createChart } from './result-chart.js';
 import { ensureWorkbookLoaded } from '../../scripts/server.js';
 
-export class MockResult extends HTMLElement {
+export class ResultComponent extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
   }
 
   render() {
+    console.log('ResultComponent: Initializing shadow DOM...');
     this.shadowRoot.innerHTML = `
         <style>
           :host {
@@ -63,7 +64,7 @@ export class MockResult extends HTMLElement {
         <div class="results-layout">
           <div class="chart-section">
             <h1>AI Maturity Assessment Results</h1>
-            <canvas id="mock-result-canvas"></canvas>
+            <canvas id="result-canvas"></canvas>
           </div>
           <div class="bands-section">
             <h2>Maturity Bands</h2>
@@ -78,10 +79,17 @@ export class MockResult extends HTMLElement {
     this.init();
   }
 
-  init() {
-    const canvas = this.shadowRoot.getElementById('mock-result-canvas');
-    createChart(canvas);
-    this.populateMaturityBands();
+  async init() {
+    const canvas = this.shadowRoot.getElementById('result-canvas');
+    if (canvas) {
+      try {
+        // createChart is async and handles its own workbook loading via ensureWorkbookLoaded
+        await createChart(canvas);
+      } catch (err) {
+        console.error("Chart initialization failed:", err);
+      }
+    }
+    await this.populateMaturityBands();
   }
 
   async populateMaturityBands() {
@@ -116,8 +124,8 @@ export class MockResult extends HTMLElement {
   }
 }
 
-if (!customElements.get('mock-result')) {
-    customElements.define('mock-result', MockResult);
+if (!customElements.get('result-component')) {
+    customElements.define('result-component', ResultComponent);
   }
 
-export default MockResult;
+export default ResultComponent;

@@ -1,32 +1,56 @@
 import Chart from 'chart.js/auto';
+import Excel from 'exceljs/dist/exceljs.min.js';
+import { ensureWorkbookLoaded } from '../../scripts/server.js';
 
 const chartDataset = [];
 
 async function loadChartDatasets() {
 	try {
 		// Use an absolute path from the root. Adjust if your assets folder is named differently.
-		const response = await fetch('/assets/chart.data.json');
+    const workbook = await ensureWorkbookLoaded();
+    const calcWorksheet = workbook.getWorksheet('AIA-Calculations');
+    const uiWorksheet = workbook.getWorksheet('AIA-UI-Config');
 
-		if (!response.ok) {
-			throw new Error(`HTTP error! status: ${response.status} at ${response.url}`);
-		}
+    if (!calcWorksheet || !uiWorksheet) {
+      console.error('Required worksheets (Calculations or UI-Config) not found.');
+      return;
+    }
 
-		let data;
-		try {
-			  data = await response.json();
-		} catch (jsonError) {
-			  console.error('The server returned something that was not JSON. Check the Network tab in DevTools.');
-			throw jsonError;
-		}
+		const dimensionDataset = [];
 
-		const dimensionDataset = data.datasets;
-		chartDataset.length = 0; // Clear the array to prevent duplicate data on re-renders
+    calcWorksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1 && rowNumber <= 5) { // Skip header row and stop after row 5
+        const label = row.getCell(1).value;
+        const backgroundColor = uiWorksheet.getRow(rowNumber).getCell(4).value;
+        const borderColor = uiWorksheet.getRow(rowNumber).getCell(5).value;
+        const borderWidth = uiWorksheet.getRow(rowNumber).getCell(6).value;
+
+        const data = []
+
+        for (let i = 2; i <= 4; i++) { // Columns B, C, D
+          const cellValue = row.getCell(i).value;
+
+          // If cell is a formula, ExcelJS returns { formula: '...', result: X }
+          // We extract the result, otherwise use the value directly.
+          const val = (cellValue && typeof cellValue === 'object' && 'result' in cellValue)
+            ? cellValue.result
+            : cellValue;
+
+          // Ensure the value is a number and default to 0 if empty
+          data.push(Number(val) || 0);
+        }
+
+        dimensionDataset.push({ label, data, backgroundColor, borderColor, borderWidth });
+      }
+    });
+
+    chartDataset.length = 0; // Clear the array to prevent duplicate data on re-renders
 
 		for (const dataset of dimensionDataset) {
 			chartDataset.push(
         {
           label: dataset.label,
-          data: JSON.parse(dataset.data),
+          data: dataset.data,
           backgroundColor: dataset.backgroundColor,
           borderColor: dataset.borderColor,
           borderWidth: dataset.borderWidth
@@ -44,8 +68,7 @@ export async function createChart(canvasElement){
   if (!canvasElement) return;
 
   const chartType = 'radar'; // Change to 'radar' for radar chart
-  const chartRadarDimensions = ['Governance & Oversight', 'Strategy & Value Realization', 'Responsible AI & Risk Management',
-                                  'Operating Model & Enablement', 'Technology & Architecture'];
+  const chartRadarDimensions = ['Strategic Direction', 'Operational Realization', 'Organizational Change Management'];
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
