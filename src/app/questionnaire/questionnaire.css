@@ -1,0 +1,52 @@
+:host {
+  display: block;
+  font-family: Arial, sans-serif;
+}
+
+.container {
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+  margin: 0 auto;
+}
+
+h1, h2, h3 { color: #333; }
+
+#role-selector-section, #questionnaire-section { margin-top: 20px; }
+
+#role-selector {
+  padding: 10px;
+  width: 80%;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.hidden { display: none; }
+
+#question-container { margin-top: 20px; text-align: left; }
+
+#current-question-text { font-size: 18px; margin-bottom: 15px; color: #555; }
+
+#response-options label { display: block; margin-bottom: 10px; font-size: 16px; cursor: pointer; }
+
+#response-options input[type="radio"] { margin-right: 10px; }
+
+#submit-response {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 20px;
+}
+
+#submit-response:hover { background-color: #0056b3; }
+
+#thank-you-message { margin-top: 30px; color: #28a745; }

@@ -8,3 +8,15 @@
   margin: 0 auto; }
 
   h1, h2, h3 { color: #333; }
+
+.info-box {
+  background: #f4f4f4;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin: 2rem 0;
+}
+
+.start-button {
+  padding: 10px 20px;
+  cursor: pointer;
+}

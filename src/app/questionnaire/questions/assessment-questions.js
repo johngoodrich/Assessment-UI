@@ -1,5 +1,5 @@
-import { loadQuestionConfig } from './scripts/question-config.js';
-import { loadAnswerConfig } from './scripts/answer-config.js';
+import { parseQuestions, getCellString } from './scripts/question-config.js';
+import { parseAnswerMap } from './scripts/answer-config.js';
 import { ensureWorkbookLoaded } from '../../scripts/server.js';
 
 export class AssessmentQuestions extends HTMLElement {
@@ -14,23 +14,10 @@ export class AssessmentQuestions extends HTMLElement {
             };
         }
 
+        // Defines the internal HTML structure and links the external stylesheet
         render() {
             this.shadowRoot.innerHTML = `
-                <style>
-                    :host { display: block; font-family: Arial, sans-serif; }
-                    .container { background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); width: 100%; max-width: 600px; text-align: center; margin: 0 auto; }
-                    h1, h2, h3 { color: #333; }
-                    #role-selector-section, #questionnaire-section { margin-top: 20px; }
-                    #role-selector { padding: 10px; width: 80%; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
-                    .hidden { display: none; }
-                    #question-container { margin-top: 20px; text-align: left; }
-                    #current-question-text { font-size: 18px; margin-bottom: 15px; color: #555; }
-                    #response-options label { display: block; margin-bottom: 10px; font-size: 16px; cursor: pointer; }
-                    #response-options input[type="radio"] { margin-right: 10px; }
-                    #submit-response { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 20px; }
-                    #submit-response:hover { background-color: #0056b3; }
-                    #thank-you-message { margin-top: 30px; color: #28a745; }
-                </style>
+                <link rel="stylesheet" href="../questionnaire.css">
                 <div class="container">
                     <h1>AI Maturity Assessment</h1>
                     <div id="role-selector-section">
@@ -60,6 +47,7 @@ export class AssessmentQuestions extends HTMLElement {
             this.init(); // Call init after rendering to get element references
         }
 
+        // Caches DOM references and binds event listeners
         init() {
             const qs = (id) => this.shadowRoot.getElementById(id);
             this.els = {
@@ -73,18 +61,19 @@ export class AssessmentQuestions extends HTMLElement {
                 thankYou: qs('thank-you-message')
             };
 
-            // Populate roles from Excel config
             this.populateRoles();
 
             this.els.roleSelector.addEventListener('change', (e) => this.handleRoleSelection(e.target.value));
             this.els.submitBtn.addEventListener('click', () => this.handleSubmit());
         }
 
+        // Ensures the singleton workbook instance is loaded before any data operations
         async ensureWorkbookLoaded() {
             if (this.workbookInstance) return;
             this.workbookInstance = await ensureWorkbookLoaded();
         }
 
+        // Fetches roles from the 'AIA-UI-Config' sheet to populate the dropdown menu
         async populateRoles() {
             try {
                 await this.ensureWorkbookLoaded();
@@ -99,7 +88,7 @@ export class AssessmentQuestions extends HTMLElement {
 
                 uiWorksheet.eachRow((row, rowNumber) => {
                     if (rowNumber === 1) return; // Skip Header
-                    const role = this.getCellString(row.getCell(1));
+                    const role = getCellString(row.getCell(1));
                     if (role) {
                         const option = document.createElement('option');
                         option.value = role;
@@ -112,16 +101,7 @@ export class AssessmentQuestions extends HTMLElement {
             }
         }
 
-        // Helper to get string value from a cell (handles RichText and whitespace)
-        getCellString(cell) {
-            const val = cell.value;
-            if (!val) return '';
-            if (typeof val === 'object' && val.richText) {
-                return val.richText.map(rt => rt.text).join('').trim();
-            }
-            return String(val).trim();
-        }
-
+        // Orchestrates the loading of questions and response maps for a specific role
         async loadQuestions(selectedRole) {
             try {
                 await this.ensureWorkbookLoaded();
@@ -132,44 +112,9 @@ export class AssessmentQuestions extends HTMLElement {
 
                     if (!worksheet || !answerWorksheet) throw new Error('Required worksheets not found in workbook');
 
-                    // Pre-build a map of responses keyed by the Question ID for efficient lookup
-                    const questionResponses = [];
-                    answerWorksheet.eachRow((row, rowNumber) => {
-                        if (rowNumber === 1) return; // Skip Header
-
-                        const qId = this.getCellString(row.getCell(1));
-                        if (!qId) return;
-
-                        const responseText = this.getCellString(row.getCell(2));
-                        const responseScore = this.getCellString(row.getCell(3));
-
-                        questionResponses.push({
-                            id: qId,
-                            response: responseText,
-                            score: responseScore
-                        });
-                    });
-
-                    const excelQuestions = [];
-                    worksheet.eachRow((row, rowNumber) => {
-                        if (rowNumber === 1) return; // Skip Header
-
-                        // Normalize role and ID for exact matching
-                        const rowRole = this.getCellString(row.getCell(2));
-                        const questionId = this.getCellString(row.getCell(1));
-
-                        if (rowRole === selectedRole) {
-                            excelQuestions.push({
-                              id: questionId,
-                              role: rowRole,
-                              dimension: this.getCellString(row.getCell(3)),
-                              pillar: this.getCellString(row.getCell(4)),
-                              dimensionWeight: this.getCellString(row.getCell(5)),
-                              question: this.getCellString(row.getCell(6)),
-                              responses: questionResponses.filter(q => q.id === questionId) || []
-                            });
-                        }
-                    });
+                    // Delegate parsing logic to specialized config scripts
+                    const questionResponses = parseAnswerMap(answerWorksheet);
+                    const excelQuestions = parseQuestions(worksheet, selectedRole, questionResponses);
 
                     this.state.currentRoleQuestions = excelQuestions;
                     console.log(`Loaded ${excelQuestions.length} questions from Excel for role: ${selectedRole}`);
@@ -182,6 +127,7 @@ export class AssessmentQuestions extends HTMLElement {
             }
         }
 
+        // Transitions the UI from role selection to the questionnaire
         async handleRoleSelection(role) {
             if (!role) return;
 
@@ -201,6 +147,7 @@ export class AssessmentQuestions extends HTMLElement {
             }
         }
 
+        // Renders the current question and generates radio buttons for each response option
         displayQuestion() {
             const question = this.state.currentRoleQuestions[this.state.currentQuestionIndex];
             this.els.questionText.textContent = question.question;
@@ -218,6 +165,7 @@ export class AssessmentQuestions extends HTMLElement {
             });
         }
 
+        // Records the user's response directly into the in-memory Excel workbook
         async captureResponse(role, questionId, responseText, responseScore) {
             try {
                 // Re-fetch the latest workbook from the server to sync with data from other sessions
@@ -242,6 +190,7 @@ export class AssessmentQuestions extends HTMLElement {
             }
         }
 
+        // Sends the entire modified workbook as a binary buffer to the backend for persistence
         async sendResultsToServer() {
             if (!this.workbookInstance) return;
 
@@ -273,6 +222,7 @@ export class AssessmentQuestions extends HTMLElement {
             }
         }
 
+        // Logic for the 'Submit Response' button: saves the answer, syncs with server, and moves to the next question
         async handleSubmit() {
             const selected = this.shadowRoot.querySelector('input[name="currentQuestionResponse"]:checked');
             if (!selected) {
