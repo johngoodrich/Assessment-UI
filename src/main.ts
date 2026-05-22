@@ -7,11 +7,10 @@ import { App } from './app/app';
 import './app/questionnaire/questions/assessment-questions.js';
 import './app/questionnaire/questions/scripts/question-config.js';
 import './app/questionnaire/questions/scripts/answer-config.js';
-import './app/scripts/ui-config.js';
 import './app/scripts/server.js';
 
-import './app/results/scripts/mock-result-chart.js';
-import './app/results/scripts/mock-result.js';
+import './app/results/scripts/result-chart.js';
+import './app/results/scripts/result.js';
 
 bootstrapApplication(App, appConfig)
   .catch((err) => console.error(err));

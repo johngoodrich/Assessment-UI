@@ -1,4 +1,4 @@
-import ExcelJS from 'exceljs';
+import ExcelJS from 'exceljs/dist/exceljs.min.js';
 
 let workbookCache = null;
 const BACKEND_URL = 'http://localhost:3000';
