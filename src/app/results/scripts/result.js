@@ -11,9 +11,58 @@ export class ResultComponent extends HTMLElement {
 
   // Define the base structure and link the external stylesheet
   render() {
-    console.log('ResultComponent: Initializing shadow DOM...');
     this.shadowRoot.innerHTML = `
-        <link rel="stylesheet" href="../results.css">
+        <style>
+          :host {
+              display: block !important;
+              margin: 0 !important; /* Override margin: 0 auto; */
+              padding: 0 !important; /* Override padding: 2rem; */
+              width: 100% !important; /* Ensure full width */
+              max-width: none !important; /* Override max-width: 800px; */
+          }
+          canvas {
+              width: 100% !important;
+              height: 500px !important;
+              display: block; /* avoids inline spacing issues */
+          }
+          .results-layout {
+              margin: 0 !important; /* Ensure no internal margins */
+              width: 100% !important; /* Ensure internal layout takes full width */
+              max-width: none !important; /* Ensure internal layout is not constrained */
+              display: flex; /* Enable Flexbox for side-by-side layout */
+              gap: 20px; /* Add some space between the sections */
+              flex-wrap: wrap; /* Allow sections to wrap on smaller screens */
+              padding: 2rem;
+              box-sizing: border-box;
+          }
+          .chart-section {
+              flex: 2; /* Chart takes up more space */
+              height: 500px;
+          }
+          .bands-section {
+              flex: 0.7; /* Bands section is smaller */
+              min-width: 280px;
+              background-color: #f9f9f9;
+              border: 1px solid #ddd;
+              border-radius: 8px;
+              padding: 20px;
+              align-self: flex-start; /* Prevents stretching to match chart height */
+          }
+          .bands-section h2 {
+              color: #333;
+              border-bottom: 4px solid #007bff; /* Eye-catching blue line */
+              padding-bottom: 8px;
+              margin-bottom: 20px;
+          }
+          #maturity-band-content {
+              display: grid;
+              grid-template-columns: max-content 1fr; /* Label column fits content, Score takes rest */
+              column-gap: 20px;
+              row-gap: 12px;
+              align-items: center;
+          }
+          .band-label { font-weight: bold; }
+        </style>
         <div class="results-layout">
           <div class="chart-section">
             <h1>AI Maturity Assessment Results</h1>
