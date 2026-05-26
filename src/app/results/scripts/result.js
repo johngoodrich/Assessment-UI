@@ -1,5 +1,5 @@
 import { createChart } from './result-chart.js';
-import { ensureWorkbookLoaded } from '../../scripts/server.js';
+import { fetchConfig } from '../../scripts/server.js';
 
 // Web Component to display the AI Maturity Assessment results and maturity band definitions
 export class ResultComponent extends HTMLElement {
@@ -100,28 +100,15 @@ export class ResultComponent extends HTMLElement {
   async populateMaturityBands() {
     const contentArea = this.shadowRoot.getElementById('maturity-band-content');
     try {
-      const workbook = await ensureWorkbookLoaded();
-      // Get the configuration sheet which contains band definitions (Level 1-5)
-      const sheet = workbook.getWorksheet('AIA-UI-Config');
-
-      if (!sheet) {
-        contentArea.innerHTML = '<p>Configuration sheet not found.</p>';
-        return;
-      }
+      const bands = await fetchConfig('/api/config/bands');
 
       let html = '';
-      // ExcelJS rows are 1-indexed. Assuming Row 1 is Headers.
-      sheet.eachRow((row, rowNumber) => {
-        if (rowNumber > 1) {
-          const bandName = row.getCell(2).value; // Column B
-          const score = row.getCell(3).value; // Column C
-          if (bandName) {
-            html += `
-              <div class="band-label">${bandName}:</div>
-              <div class="band-score">${score || ''}</div>`;
-          }
-        }
+      bands.forEach(band => {
+        html += `
+          <div class="band-label">${band.name}:</div>
+          <div class="band-score">${band.score || ''}</div>`;
       });
+
       contentArea.innerHTML = html || '<p>No maturity definitions were found in the workbook.</p>';
     } catch (error) {
       console.error('Failed to populate maturity bands:', error);

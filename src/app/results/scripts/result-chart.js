@@ -1,6 +1,5 @@
 import Chart from 'chart.js/auto';
-import Excel from 'exceljs/dist/exceljs.min.js';
-import { ensureWorkbookLoaded } from '../../scripts/server.js';
+import { fetchConfig } from '../../scripts/server.js';
 
 // Global reference for the formatted datasets used by Chart.js
 const chartDataset = [];
@@ -10,49 +9,11 @@ let currentChart = null;
 // Reads calculation results and UI styling configurations from the Excel workbook
 async function loadChartDatasets() {
 	try {
-    const workbook = await ensureWorkbookLoaded();
-    const calcWorksheet = workbook.getWorksheet('AIA-Calculations');
-    const uiWorksheet = workbook.getWorksheet('AIA-UI-Config');
-
-    if (!calcWorksheet || !uiWorksheet) {
-      console.error('Required worksheets (Calculations or UI-Config) not found.');
-      return;
-    }
-
-		const dimensionDataset = [];
-
-    // Iterate through specific rows (Dimensions) in the calculations sheet
-    calcWorksheet.eachRow((row, rowNumber) => {
-      if (rowNumber > 1 && rowNumber <= 5) { // Skip header row and stop after row 5
-        const label = row.getCell(1).value;
-
-        // Extract visual styling (colors/width) for this series from the UI-Config sheet
-        const backgroundColor = uiWorksheet.getRow(rowNumber).getCell(4).value;
-        const borderColor = uiWorksheet.getRow(rowNumber).getCell(5).value;
-        const borderWidth = uiWorksheet.getRow(rowNumber).getCell(6).value;
-
-        const data = []
-
-        // Collect the calculated scores for each Pillar (Strategic, Operational, OCM)
-        for (let i = 2; i <= 4; i++) { // Columns B, C, D (Calculated results)
-          const cellValue = row.getCell(i).value;
-
-          // Handle formula results: ExcelJS provides an object { formula, result } for calculated cells
-          const val = (cellValue && typeof cellValue === 'object' && 'result' in cellValue)
-            ? cellValue.result
-            : cellValue;
-
-          // Ensure the value is a number and default to 0 if empty
-          data.push(Number(val) || 0);
-        }
-
-        dimensionDataset.push({ label, data, backgroundColor, borderColor, borderWidth });
-      }
-    });
+    const datasets = await fetchConfig('/api/chart-data');
 
     // Refresh the global dataset array to ensure accurate rendering on re-loads
     chartDataset.length = 0;
-    chartDataset.push(...dimensionDataset);
+    chartDataset.push(...datasets);
 
 	}
   catch (error) {

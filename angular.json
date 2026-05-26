@@ -74,7 +74,8 @@
               "buildTarget": "assessment-questionnaire:build:production"
             },
             "development": {
-              "buildTarget": "assessment-questionnaire:build:development"
+              "buildTarget": "assessment-questionnaire:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

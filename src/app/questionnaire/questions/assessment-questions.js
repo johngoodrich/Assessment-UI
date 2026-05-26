@@ -1,6 +1,4 @@
-import { parseQuestions, getCellString } from './scripts/question-config.js';
-import { parseAnswerMap } from './scripts/answer-config.js';
-import { ensureWorkbookLoaded } from '../../scripts/server.js';
+import { fetchConfig } from '../../scripts/server.js';
 
 export class AssessmentQuestions extends HTMLElement {
         constructor() {
@@ -89,61 +87,31 @@ export class AssessmentQuestions extends HTMLElement {
             this.els.submitBtn.addEventListener('click', () => this.handleSubmit());
         }
 
-        // Ensures the singleton workbook instance is loaded before any data operations
-        async ensureWorkbookLoaded() {
-            if (this.workbookInstance) return;
-            this.workbookInstance = await ensureWorkbookLoaded();
-        }
-
-        // Fetches roles from the 'AIA-UI-Config' sheet to populate the dropdown menu
+        // Fetches roles from the backend API
         async populateRoles() {
             try {
-                await this.ensureWorkbookLoaded();
-                const uiWorksheet = this.workbookInstance.getWorksheet('AIA-UI-Config');
-                if (!uiWorksheet) {
-                    console.error('Configuration sheet "AIA-UI-Config" not found.');
-                    this.els.roleSelector.innerHTML = '<option value="">Error: Config not found</option>';
-                    return;
-                }
+                const roles = await fetchConfig('/api/config/roles');
 
                 // Clear existing and keep placeholder
                 this.els.roleSelector.innerHTML = '<option value="">--Please choose an option--</option>';
 
-                uiWorksheet.eachRow((row, rowNumber) => {
-                    if (rowNumber === 1) return; // Skip Header
-                    const role = getCellString(row.getCell(1));
-                    if (role) {
-                        const option = document.createElement('option');
-                        option.value = role;
-                        option.textContent = role;
-                        this.els.roleSelector.appendChild(option);
-                    }
+                roles.forEach(role => {
+                    const option = document.createElement('option');
+                    option.value = role;
+                    option.textContent = role;
+                    this.els.roleSelector.appendChild(option);
                 });
             } catch (error) {
-                console.error('Failed to populate roles from Excel:', error.message);
+                console.error('Failed to populate roles:', error.message);
             }
         }
 
-        // Orchestrates the loading of questions and response maps for a specific role
+        // Fetches role-specific questions from the backend API
         async loadQuestions(selectedRole) {
             try {
-                await this.ensureWorkbookLoaded();
-
-                try {
-                    const worksheet = this.workbookInstance.getWorksheet('AIA-Question-Config');
-                    const answerWorksheet = this.workbookInstance.getWorksheet('AIA-Question-Response-Map');
-
-                    if (!worksheet || !answerWorksheet) throw new Error('Required worksheets not found in workbook');
-
-                    // Delegate parsing logic to specialized config scripts
-                    const questionResponses = parseAnswerMap(answerWorksheet);
-                    const excelQuestions = parseQuestions(worksheet, selectedRole, questionResponses);
-
-                    this.state.currentRoleQuestions = excelQuestions;
-                    console.log(`Loaded ${excelQuestions.length} questions from Excel for role: ${selectedRole}`);
-                } catch (excelError) {
-                    console.error('Failed to process Excel data:', excelError.message);
-                }
+                const questions = await fetchConfig(`/api/config/questions?role=${encodeURIComponent(selectedRole)}`);
+                this.state.currentRoleQuestions = questions;
+                console.log(`Loaded ${questions.length} questions for role: ${selectedRole}`);
             } catch (error) {
                 console.error('Error loading questions:', error.message);
                 this.els.questionText.textContent = `Error: Could not load questions from server.`;
@@ -204,7 +172,7 @@ export class AssessmentQuestions extends HTMLElement {
             if (!data || data.length === 0) return;
 
             try {
-                const response = await fetch('http://localhost:3000/api/save-assessment-results', {
+                const response = await fetch('/api/save-assessment-results', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

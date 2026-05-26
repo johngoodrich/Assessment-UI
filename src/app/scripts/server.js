@@ -1,34 +1,18 @@
-import ExcelJS from 'exceljs/dist/exceljs.min.js';
-
-// Global cache to store the loaded workbook and prevent repeated network requests
-let workbookCache = null;
-// URL for the .NET backend API
-const BACKEND_URL = 'http://localhost:3000';
-
 /**
- * Fetches the Excel template from the .NET backend and loads it into an ExcelJS workbook.
- * Caches the workbook for subsequent calls.
+ * Helper to fetch JSON from the backend APIs
  */
-export async function ensureWorkbookLoaded() {
-    // Return cached instance if available
-    if (workbookCache) return workbookCache;
+export async function fetchConfig(endpoint) {
+    const response = await fetch(endpoint);
 
-    try {
-        // Fetch the Excel template as a binary arrayBuffer from the server
-        const response = await fetch(`${BACKEND_URL}/api/get-assessment-template`);
-        if (!response.ok) throw new Error(`Failed to fetch template: ${response.statusText}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-        const arrayBuffer = await response.arrayBuffer();
-
-        // Initialize a new ExcelJS workbook and load the binary data
-        const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(arrayBuffer);
-
-        // Cache and return the fully initialized workbook
-        workbookCache = workbook;
-        return workbookCache;
-    } catch (error) {
-        console.error('Error in ensureWorkbookLoaded:', error);
-        throw error;
+    // Check if we received HTML (likely the SPA fallback index.html) instead of JSON
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+        console.error(`[ERROR] Received HTML instead of JSON from ${endpoint}.
+                          This suggests the API route was not found on the backend.`);
+        throw new Error("Received HTML instead of JSON. Check if backend routes are registered and the server has been restarted.");
     }
+
+    return await response.json();
 }
