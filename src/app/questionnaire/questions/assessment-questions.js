@@ -157,12 +157,13 @@ export class AssessmentQuestions extends HTMLElement {
         }
 
         // Requirement #2: Capture response as a normalized JSON object in the local state
-        async captureResponse(role, questionId, responseText, responseScore) {
+        async captureResponse(role, questionId, responseText, responseScore, domain) {
             this.state.userResponses.push({
                 role,
-                questionId,
+                questionId, // This is the ID from the Excel sheet
                 responseText,
-                responseScore
+                responseScore,
+                domain // Capture domain for later analysis
             });
             console.log(`Captured local response for ${questionId}`);
         }
@@ -187,7 +188,7 @@ export class AssessmentQuestions extends HTMLElement {
                 }
 
             } catch (error) {
-                console.error('Failed to export Excel file:', error);
+                console.error('Failed to send assessment results to server:', error);
             }
         }
 
@@ -205,9 +206,10 @@ export class AssessmentQuestions extends HTMLElement {
               .responses.find(r => r.response === selected.value)?.response || selected.value;
             const responseScore = parseInt(this.state.currentRoleQuestions[this.state.currentQuestionIndex]
               .responses.find(r => r.response === selected.value)?.score) || 0;
+            const domain = question.dimension;
 
             // Capture response to the persistent Excel worksheet object
-            this.captureResponse(role, question.id, responseText, responseScore);
+            this.captureResponse(role, question.id, responseText, responseScore, domain);
 
             this.state.currentQuestionIndex++;
 
